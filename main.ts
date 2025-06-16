@@ -6,16 +6,16 @@ radio.setTransmitSerialNumber(true)
 type IRC = {
     l: DigitalPin,
     c: DigitalPin,
-    p: DigitalPin
+    r: DigitalPin
 }
 const IR: IRC = {
     l: DigitalPin.P13,
     c: DigitalPin.P15,
-    p: DigitalPin.P14
+    r: DigitalPin.P14
 }
 pins.setPull(IR.l, PinPullMode.PullNone);
 pins.setPull(IR.c, PinPullMode.PullNone);
-pins.setPull(IR.p, PinPullMode.PullNone);
+pins.setPull(IR.r, PinPullMode.PullNone);
 
 let L: number = 0;
 let P: number = 0;
@@ -24,12 +24,37 @@ let dataC: number = 0;
 let dataP: number = 0;
 let krizovatka = false;
 
-// === HLAVNÍ SMYČKA: ČTENÍ SENZORŮ ===
+function setMotors(left: number, right: number) {
+    const PWM_L = AnalogPin.P1
+    const DIR_L = DigitalPin.P8
+    const PWM_P = AnalogPin.P2
+    const DIR_P = DigitalPin.P12
+
+    if (left >= 0) {
+        pins.digitalWritePin(DIR_L, 0)
+        pins.analogWritePin(PWM_L, left)
+    } else {
+        pins.digitalWritePin(DIR_L, 1)
+        pins.analogWritePin(PWM_L, -left)
+    }
+
+    if (right >= 0) {
+        pins.digitalWritePin(DIR_P, 0)
+        pins.analogWritePin(PWM_P, right)
+    } else {
+        pins.digitalWritePin(DIR_P, 1)
+        pins.analogWritePin(PWM_P, -right)
+    }
+}
+
 basic.forever(function () {
     dataL = pins.digitalReadPin(IR.l);
     dataC = pins.digitalReadPin(IR.c);
-    dataP = pins.digitalReadPin(IR.p);
+    dataP = pins.digitalReadPin(IR.r);
 
+
+    PCAmotor.MotorRun(PCAmotor.Motors.M1, L)
+    PCAmotor.MotorRun(PCAmotor.Motors.M4, P)
     if (krizovatka === false) {
         if (dataC === 1 && dataL === 0 && dataP === 0) {
             L = 150
@@ -43,7 +68,7 @@ basic.forever(function () {
         }
     }
 
-    // Detekce křižovatky (čára pod středem, ale levý i pravý mimo)
+
     if (dataL === 1 && dataP === 1 && dataC === 0) {
         radio.sendNumber(0)
         P = 0
@@ -51,27 +76,22 @@ basic.forever(function () {
         krizovatka = true
     }
 
-    setMotors(L, P)
     basic.pause(10)
 })
 
-// === RADIO: Příkazy pro odbočení ===
 radio.onReceivedNumber(function (receivedNumber: number) {
     let serial: number = radio.receivedPacket(RadioPacketProperty.SerialNumber)
     if (serial === 1569162800) {
         if (krizovatka === true) {
             if (receivedNumber === 1) {
-                // Doprava
                 P = 250
                 L = 50
                 krizovatka = false
             } else if (receivedNumber === 2) {
-                // Doleva
                 L = 250
                 P = 50
                 krizovatka = false
             } else if (receivedNumber === 3) {
-                // Rovně
                 P = 150
                 L = 150
                 krizovatka = false
@@ -79,29 +99,3 @@ radio.onReceivedNumber(function (receivedNumber: number) {
         }
     }
 })
-
-// === FUNKCE pro řízení motorů ===
-function setMotors(left: number, right: number) {
-    const PWM_L = AnalogPin.P1   // uprav podle propojení
-    const DIR_L = DigitalPin.P8
-    const PWM_P = AnalogPin.P2
-    const DIR_P = DigitalPin.P12
-
-    // Levý motor
-    if (left >= 0) {
-        pins.digitalWritePin(DIR_L, 0)
-        pins.analogWritePin(PWM_L, left)
-    } else {
-        pins.digitalWritePin(DIR_L, 1)
-        pins.analogWritePin(PWM_L, -left)
-    }
-
-    // Pravý motor
-    if (right >= 0) {
-        pins.digitalWritePin(DIR_P, 0)
-        pins.analogWritePin(PWM_P, right)
-    } else {
-        pins.digitalWritePin(DIR_P, 1)
-        pins.analogWritePin(PWM_P, -right)
-    }
-}
