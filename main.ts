@@ -35,10 +35,10 @@ basic.forever(function () {
         if (dataC === 1 && dataL === 0 && dataP === 0) {
             L = 200;
             P = 200;
-        } else if (dataL === 1 && dataP === 0) {
+        } else if (dataL === 1 && dataP === 0 && dataC === 0) {
             L = 50;
             P = 250;
-        } else if (dataL === 0 && dataP === 1) {
+        } else if (dataL === 0 && dataP === 1 && dataC === 0) {
             L = 250;
             P = 50;
         }
