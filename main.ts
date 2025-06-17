@@ -1,101 +1,89 @@
-radio.setGroup(69)
-radio.setTransmitPower(7)
-radio.setFrequencyBand(20)
-radio.setTransmitSerialNumber(true)
+radio.setGroup(69);
+radio.setTransmitPower(7);
+radio.setFrequencyBand(20);
+radio.setTransmitSerialNumber(true);
 
 type IRC = {
     l: DigitalPin,
     c: DigitalPin,
-    r: DigitalPin
-}
+    p: DigitalPin
+};
+
 const IR: IRC = {
-    l: DigitalPin.P13,
+    l: DigitalPin.P14,
     c: DigitalPin.P15,
-    r: DigitalPin.P14
-}
+    p: DigitalPin.P13
+};
+
 pins.setPull(IR.l, PinPullMode.PullNone);
 pins.setPull(IR.c, PinPullMode.PullNone);
-pins.setPull(IR.r, PinPullMode.PullNone);
+pins.setPull(IR.p, PinPullMode.PullNone);
 
-let L: number = 0;
-let P: number = 0;
-let dataL: number = 0;
-let dataC: number = 0;
-let dataP: number = 0;
-let krizovatka = false;
-
-function setMotors(left: number, right: number) {
-    const PWM_L = AnalogPin.P1
-    const DIR_L = DigitalPin.P8
-    const PWM_P = AnalogPin.P2
-    const DIR_P = DigitalPin.P12
-
-    if (left >= 0) {
-        pins.digitalWritePin(DIR_L, 0)
-        pins.analogWritePin(PWM_L, left)
-    } else {
-        pins.digitalWritePin(DIR_L, 1)
-        pins.analogWritePin(PWM_L, -left)
-    }
-
-    if (right >= 0) {
-        pins.digitalWritePin(DIR_P, 0)
-        pins.analogWritePin(PWM_P, right)
-    } else {
-        pins.digitalWritePin(DIR_P, 1)
-        pins.analogWritePin(PWM_P, -right)
-    }
-}
+let L = 0;
+let P = 0;
+let intersection = false;
 
 basic.forever(function () {
-    dataL = pins.digitalReadPin(IR.l);
-    dataC = pins.digitalReadPin(IR.c);
-    dataP = pins.digitalReadPin(IR.r);
-
+    let dataL = pins.digitalReadPin(IR.l);
+    let dataC = pins.digitalReadPin(IR.c);
+    let dataP = pins.digitalReadPin(IR.p);
 
     PCAmotor.MotorRun(PCAmotor.Motors.M1, L)
     PCAmotor.MotorRun(PCAmotor.Motors.M4, P)
-    if (krizovatka === false) {
+
+    if (!intersection) {
         if (dataC === 1 && dataL === 0 && dataP === 0) {
-            L = 150
-            P = 150
-        } else if (dataP === 0 && dataL === 1) {
-            P = 250
-            L = 50
+            L = 200;
+            P = 200;
+        } else if (dataL === 1 && dataP === 0) {
+            L = 50;
+            P = 250;
         } else if (dataL === 0 && dataP === 1) {
-            P = 50
-            L = 250
+            L = 250;
+            P = 50;
         }
     }
 
-
-    if (dataL === 1 && dataP === 1 && dataC === 0) {
-        radio.sendNumber(0)
-        P = 0
-        L = 0
-        krizovatka = true
+    if (dataL === 1 && dataP === 1) {
+        radio.sendNumber(0);
+        L = 0;
+        P = 0;
+        intersection = true;
+    }
+    else if (dataC === 1 && dataP === 1) {
+        radio.sendNumber(0);
+        L = 0;
+        P = 0;
+        intersection = true;
+    }
+    else if (dataL === 1 && dataC === 1) {
+        radio.sendNumber(0);
+        L = 0;
+        P = 0;
+        intersection = true;
+    }
+    else if (dataL === 1 && dataP === 1 && dataC === 1) {
+        radio.sendNumber(0);
+        L = 0;
+        P = 0;
+        intersection = true;
     }
 
-    basic.pause(10)
-})
+});
 
 radio.onReceivedNumber(function (receivedNumber: number) {
-    let serial: number = radio.receivedPacket(RadioPacketProperty.SerialNumber)
+    let serial = radio.receivedPacket(RadioPacketProperty.SerialNumber);
     if (serial === 1569162800) {
-        if (krizovatka === true) {
-            if (receivedNumber === 1) {
-                P = 250
-                L = 50
-                krizovatka = false
-            } else if (receivedNumber === 2) {
-                L = 250
-                P = 50
-                krizovatka = false
-            } else if (receivedNumber === 3) {
-                P = 150
-                L = 150
-                krizovatka = false
-            }
+        if (receivedNumber === 1) {
+            L = 50;
+            P = 250;
+        } else if (receivedNumber === 2) {
+            L = 250;
+            P = 50;
+        } else if (receivedNumber === 3) {
+            L = 200;
+            P = 200;
         }
+        intersection = false;
     }
-})
+});
